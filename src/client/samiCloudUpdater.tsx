@@ -96,8 +96,8 @@ if (typeof window !== 'undefined' && window.Storage) {
  */
 
 export const SAMI_EXPECTED_APP_ID = 'com.sami.tradingchallengetracker';
-export const SAMI_FALLBACK_VERSION_CODE = 15;
-export const SAMI_FALLBACK_VERSION_NAME = '1.3.1';
+export const SAMI_FALLBACK_VERSION_CODE = 16;
+export const SAMI_FALLBACK_VERSION_NAME = '1.3.2';
 
 export const SHARED_FIRESTORE_LATEST_DOC_URL =
   'https://firestore.googleapis.com/v1/projects/majestic-interface-ksmzh/databases/ai-studio-c1d1b606-9578-42a6-b7b2-17faaec47f72/documents/app_updates/latest';

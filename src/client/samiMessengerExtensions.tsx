@@ -1,4 +1,4 @@
-import React, { useState } from './samiReactShim.ts';
+import React, { useState, useEffect } from './samiReactShim.ts';
 
 export const SAMI_EMOJIS = ['❤️', '😂', '👍', '🔥', '👏', '😮'];
 
@@ -52,7 +52,15 @@ export async function toggleMessageReaction(params: {
   if (!res.ok) {
     throw new Error(json?.error || 'فشل تسجيل التفاعل');
   }
-  return json.reactions || {};
+  const reactions = json.reactions || {};
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('sami-reaction-changed', {
+        detail: { messageId: params.messageId, reactions },
+      })
+    );
+  }
+  return reactions;
 }
 
 export async function toggleMessagePin(params: {
@@ -101,6 +109,7 @@ export function SamiEmojiBar({
   onUpdated?: (reactions: Record<string, number[]>) => void;
 }) {
   const [isBusy, setIsBusy] = useState(false);
+  const effectiveChannelId = channelId || msg.channelId;
 
   const handleEmojiClick = async (emoji: string) => {
     if (isBusy) return;
@@ -109,7 +118,7 @@ export function SamiEmojiBar({
       const reactions = await toggleMessageReaction({
         messageId: msg.id,
         emoji,
-        channelId,
+        channelId: effectiveChannelId,
         conversationId,
       });
       msg.reactions = reactions;
@@ -156,6 +165,39 @@ export function SamiMessageReactions({
   conversationId?: string;
   onUpdated?: (reactions: Record<string, number[]>) => void;
 }) {
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handler = (e: any) => {
+      if (e.detail?.messageId === msg.id && e.detail?.reactions) {
+        msg.reactions = e.detail.reactions;
+        setTick((t) => t + 1);
+      }
+    };
+    window.addEventListener('sami-reaction-changed', handler);
+    return () => window.removeEventListener('sami-reaction-changed', handler);
+  }, [msg.id]);
+
+  let effectiveUid = currentUserId;
+  if (!effectiveUid && typeof window !== 'undefined') {
+    try {
+      const raw =
+        localStorage.getItem('sami_active_session') ||
+        sessionStorage.getItem('sami_active_session') ||
+        localStorage.getItem('sami_auth_user_session');
+      if (raw) {
+        const u = JSON.parse(raw);
+        if (u && u.id) effectiveUid = Number(u.id);
+      }
+      if (!effectiveUid) {
+        const uidStr = localStorage.getItem('sami_active_uid');
+        if (uidStr) effectiveUid = Number(uidStr);
+      }
+    } catch {}
+  }
+
+  const effectiveChannelId = channelId || msg.channelId;
   const reactions: Record<string, number[]> = msg.reactions || {};
   const entries = Object.entries(reactions).filter(([_, uids]) => Array.isArray(uids) && uids.length > 0);
 
@@ -167,11 +209,12 @@ export function SamiMessageReactions({
       const updated = await toggleMessageReaction({
         messageId: msg.id,
         emoji,
-        channelId,
+        channelId: effectiveChannelId,
         conversationId,
       });
       msg.reactions = updated;
       if (onUpdated) onUpdated(updated);
+      setTick((t) => t + 1);
     } catch (err: any) {
       console.warn('[Reaction] Error:', err.message);
     }
@@ -180,7 +223,7 @@ export function SamiMessageReactions({
   return (
     <div className="flex flex-wrap items-center gap-1.5 mt-1.5" onClick={(e) => e.stopPropagation()}>
       {entries.map(([emoji, uids]) => {
-        const isActive = currentUserId && uids.includes(currentUserId);
+        const isActive = effectiveUid ? uids.some((id) => Number(id) === Number(effectiveUid)) : false;
         return (
           <button
             key={emoji}

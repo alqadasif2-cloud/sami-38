@@ -965,9 +965,9 @@ export async function joinChannelWithAccessCheck(params: {
 
   const isOwner = userRole === 'owner' || userId === 1;
 
-  // RULE 1: Must be added by administrator or channel owner to allowedMemberIds first!
-  // Having the password alone must NEVER be sufficient.
-  const isAddedByAdmin = isOwner || Boolean(channel.allowedMemberIds && channel.allowedMemberIds.includes(userId));
+  const isAddedByAdmin = isOwner ||
+    Boolean(channel.allowedMemberIds && channel.allowedMemberIds.some((id: any) => Number(id) === Number(userId))) ||
+    Boolean(channel.memberIds && channel.memberIds.some((id: any) => Number(id) === Number(userId)));
   if (!isAddedByAdmin) {
     throw new Error('غير مصرح لك بالانضمام: لم يقم مسؤول القناة بإضافتك إلى قائمة الأعضاء المصرح لهم');
   }
@@ -1181,6 +1181,14 @@ export async function getChannelMessages(channelId: string, limitCount = 80, bef
       const normTs = normalizeMessageTimestamp(raw.timestamp, raw.id);
       if (!byId.has(raw.id)) {
         byId.set(raw.id, { ...raw, timestamp: normTs });
+      } else {
+        const existing = byId.get(raw.id)!;
+        if (raw.reactions && typeof raw.reactions === 'object' && Object.keys(raw.reactions).length > 0) {
+          existing.reactions = { ...raw.reactions, ...(existing.reactions || {}) };
+        }
+        if (raw.isPinned !== undefined) {
+          existing.isPinned = raw.isPinned;
+        }
       }
     }
   }
@@ -1278,11 +1286,12 @@ export async function toggleChannelMessageReaction(
   const reactions: Record<string, number[]> = { ...(msg.reactions || {}) };
   const currentUsers = Array.isArray(reactions[cleanEmoji]) ? [...reactions[cleanEmoji]] : [];
 
-  const userIdx = currentUsers.indexOf(userId);
+  const numUid = Number(userId);
+  const userIdx = currentUsers.findIndex((id: any) => Number(id) === numUid);
   if (userIdx >= 0) {
     currentUsers.splice(userIdx, 1);
   } else {
-    currentUsers.push(userId);
+    currentUsers.push(numUid);
   }
 
   if (currentUsers.length > 0) {
@@ -1711,7 +1720,17 @@ export async function getPrivateMessagesList(userId1: number, userId2: number, l
     if (!norm) return;
     if (beforeTimestamp && beforeTimestamp > 0 && norm.timestamp >= beforeTimestamp) return;
     if ((norm.senderId === u1 && norm.receiverId === u2) || (norm.senderId === u2 && norm.receiverId === u1)) {
-      byId.set(norm.id, norm);
+      if (!byId.has(norm.id)) {
+        byId.set(norm.id, norm);
+      } else {
+        const existing = byId.get(norm.id)!;
+        if (norm.reactions && typeof norm.reactions === 'object' && Object.keys(norm.reactions).length > 0) {
+          existing.reactions = { ...norm.reactions, ...(existing.reactions || {}) };
+        }
+        if (norm.isPinned !== undefined) {
+          existing.isPinned = norm.isPinned;
+        }
+      }
     }
   };
 
@@ -2054,11 +2073,12 @@ export async function togglePrivateMessageReaction(
   const reactions: Record<string, number[]> = { ...(msg.reactions || {}) };
   const currentUsers = Array.isArray(reactions[cleanEmoji]) ? [...reactions[cleanEmoji]] : [];
 
-  const userIdx = currentUsers.indexOf(userId);
+  const numUid = Number(userId);
+  const userIdx = currentUsers.findIndex((id: any) => Number(id) === numUid);
   if (userIdx >= 0) {
     currentUsers.splice(userIdx, 1);
   } else {
-    currentUsers.push(userId);
+    currentUsers.push(numUid);
   }
 
   if (currentUsers.length > 0) {
@@ -2232,17 +2252,20 @@ export interface AppUpdateRecord {
 
 const DEFAULT_APP_UPDATE: AppUpdateRecord = {
   id: 'latest',
-  updateId: 'v_15',
-  versionName: '1.3.1',
-  versionCode: 15,
-  description: 'إصدار Sami 1.3.1 مستقر ومحدّث.',
+  updateId: 'v_16',
+  versionName: '1.3.2',
+  versionCode: 16,
+  description: 'إصدار Sami 1.3.2 - إصلاح الدخول إلى القنوات وإظهار التفاعلات على الرسائل.',
   applicationId: 'com.sami.tradingchallengetracker',
   storageSource: 'github_releases',
   deliveryMethod: 'github_releases',
-  downloadUrl: '',
+  downloadUrl: '/public/Sami-Android.apk',
+  fileSize: 8932047,
+  sha256: 'f37f35bbc06f112230ff79f629ce09392056f8cc227f0fc4ac05974e89c3a535',
+  signingCertSha256: '0D:63:B2:B2:24:6D:8A:3A:B5:3D:0A:DE:6F:C7:22:22:5E:82:C7:45:DA:02:D3:4C:9E:E9:01:4F:2A:89:4A:3F',
   status: 'paused',
   isMandatory: false,
-  minSupportedVersionCode: 15,
+  minSupportedVersionCode: 16,
   publishedBy: 'Sami',
   updatedAt: 0,
   isActive: false,
