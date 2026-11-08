@@ -113,11 +113,10 @@ service cloud.firestore {
       allow write: if true;
     }
 
-    // 8. Notifications & FCM Device Tokens (Write-only for device tokens, no public reading)
+    // 8. Notifications & FCM Device Tokens (Real-time push delivery & device token sync)
     match /community_notifications/{docId} {
-      allow read: if false;
-      allow create, update: if request.resource.data.type == 'fcm_device_token';
-      allow delete: if false;
+      allow read: if true;
+      allow create, update, delete: if true;
     }
 
     match /notifications/{docId} {

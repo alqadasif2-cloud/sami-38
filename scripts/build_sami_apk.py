@@ -49,6 +49,7 @@ def build_axml():
         'icon': 0x01010002,
         'name': 0x01010003,
         'exported': 0x01010010,
+        'value': 0x01010024,
         'minSdkVersion': 0x0101020c,
         'versionCode': 0x0101021b,
         'versionName': 0x0101021c,
@@ -92,7 +93,17 @@ def build_axml():
         'category',
         'android.intent.category.LAUNCHER',
         'OPEN_SAMI_CHAT',
-        'android.intent.category.DEFAULT'
+        'android.intent.category.DEFAULT',
+        'service',
+        'com.sami.tradingchallengetracker.util.SamiFirebaseMessagingService',
+        'com.google.firebase.MESSAGING_EVENT',
+        'receiver',
+        'com.sami.tradingchallengetracker.util.SamiUpdateReplacedReceiver',
+        'android.intent.action.MY_PACKAGE_REPLACED',
+        'meta-data',
+        'firebase_messaging_auto_init_enabled',
+        'com.google.firebase.messaging.default_notification_channel_id',
+        'sami_channel_messages_v2',
     ]
     
     all_strings = attr_names + other_strings
@@ -259,9 +270,54 @@ def build_axml():
     body.extend(make_end_element('intent-filter', 29))
     
     body.extend(make_end_element('activity', 30))
-    body.extend(make_end_element('application', 31))
-    body.extend(make_end_element('manifest', 32))
-    body.extend(make_end_namespace('android', ANDROID_NS, 33))
+
+    # <service android:name="com.sami.tradingchallengetracker.util.SamiFirebaseMessagingService" android:exported="false">
+    #   <intent-filter>
+    #     <action android:name="com.google.firebase.MESSAGING_EVENT" />
+    #   </intent-filter>
+    # </service>
+    body.extend(make_start_element('service', [
+        (ANDROID_NS, 'name', 'com.sami.tradingchallengetracker.util.SamiFirebaseMessagingService', 0x03, str_map['com.sami.tradingchallengetracker.util.SamiFirebaseMessagingService']),
+        (ANDROID_NS, 'exported', None, 0x12, 0),
+    ], 31))
+    body.extend(make_start_element('intent-filter', [], 32))
+    body.extend(make_start_element('action', [(ANDROID_NS, 'name', 'com.google.firebase.MESSAGING_EVENT', 0x03, str_map['com.google.firebase.MESSAGING_EVENT'])], 33))
+    body.extend(make_end_element('action', 33))
+    body.extend(make_end_element('intent-filter', 34))
+    body.extend(make_end_element('service', 35))
+
+    # <receiver android:name="com.sami.tradingchallengetracker.util.SamiUpdateReplacedReceiver" android:exported="false">
+    #   <intent-filter>
+    #     <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+    #   </intent-filter>
+    # </receiver>
+    body.extend(make_start_element('receiver', [
+        (ANDROID_NS, 'name', 'com.sami.tradingchallengetracker.util.SamiUpdateReplacedReceiver', 0x03, str_map['com.sami.tradingchallengetracker.util.SamiUpdateReplacedReceiver']),
+        (ANDROID_NS, 'exported', None, 0x12, 0),
+    ], 36))
+    body.extend(make_start_element('intent-filter', [], 37))
+    body.extend(make_start_element('action', [(ANDROID_NS, 'name', 'android.intent.action.MY_PACKAGE_REPLACED', 0x03, str_map['android.intent.action.MY_PACKAGE_REPLACED'])], 38))
+    body.extend(make_end_element('action', 38))
+    body.extend(make_end_element('intent-filter', 39))
+    body.extend(make_end_element('receiver', 40))
+
+    # <meta-data android:name="firebase_messaging_auto_init_enabled" android:value="true" />
+    body.extend(make_start_element('meta-data', [
+        (ANDROID_NS, 'name', 'firebase_messaging_auto_init_enabled', 0x03, str_map['firebase_messaging_auto_init_enabled']),
+        (ANDROID_NS, 'value', None, 0x12, 0xFFFFFFFF),
+    ], 41))
+    body.extend(make_end_element('meta-data', 41))
+
+    # <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="sami_channel_messages_v2" />
+    body.extend(make_start_element('meta-data', [
+        (ANDROID_NS, 'name', 'com.google.firebase.messaging.default_notification_channel_id', 0x03, str_map['com.google.firebase.messaging.default_notification_channel_id']),
+        (ANDROID_NS, 'value', 'sami_channel_messages_v2', 0x03, str_map['sami_channel_messages_v2']),
+    ], 42))
+    body.extend(make_end_element('meta-data', 42))
+
+    body.extend(make_end_element('application', 43))
+    body.extend(make_end_element('manifest', 44))
+    body.extend(make_end_namespace('android', ANDROID_NS, 45))
     
     total_size = 8 + len(string_pool_chunk) + len(resource_map_chunk) + len(body)
     xml_header = struct.pack('<HHI', 0x0003, 8, total_size)

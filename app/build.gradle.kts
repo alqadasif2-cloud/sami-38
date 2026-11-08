@@ -100,12 +100,34 @@ android {
             useLegacyPackaging = false
         }
     }
+
+    applicationVariants.all {
+        outputs.all {
+            val output = this as? com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            output?.outputFileName = "Sami-Android.apk"
+        }
+    }
 }
 
 tasks.configureEach {
     if (name.contains("ArtProfile")) {
         enabled = false
     }
+}
+
+tasks.register("renameReleaseApk") {
+    doLast {
+        val releaseDir = file("build/outputs/apk/release")
+        val defaultApk = file("$releaseDir/app-release.apk")
+        val targetApk = file("$releaseDir/Sami-Android.apk")
+        if (defaultApk.exists() && !targetApk.exists()) {
+            defaultApk.copyTo(targetApk, overwrite = true)
+        }
+    }
+}
+
+tasks.matching { it.name == "assembleRelease" }.configureEach {
+    finalizedBy("renameReleaseApk")
 }
 
 dependencies {

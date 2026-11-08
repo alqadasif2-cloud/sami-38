@@ -473,6 +473,26 @@ apiRouter.post('/channels/:channelId/messages', async (req: Request, res: Respon
     };
 
     await saveChannelMessage(message);
+
+    const snippet = message.audioUrl
+      ? '🎤 رسالة صوتية'
+      : message.fileName
+      ? `📎 ملف: ${message.fileName}`
+      : message.imageUrl
+      ? '📷 صورة'
+      : message.text || 'رسالة جديدة';
+
+    // Dispatch background push notification asynchronously
+    dispatchAuthorizedChatPush({
+      senderId: user.id,
+      senderName: user.displayName || user.username,
+      senderRole: user.role,
+      chatType: 'channel',
+      channelId: req.params.channelId,
+      messageId: msgId,
+      snippet,
+    }).catch((err) => console.error('[FCM] Channel push dispatch error:', err));
+
     return res.json({ success: true, message });
   } catch (err: any) {
     return res.status(500).json({ error: err?.message || 'فشل إرسال الرسالة' });
@@ -555,6 +575,26 @@ apiRouter.post('/private-messages', async (req: Request, res: Response) => {
     };
 
     await savePrivateMessageRecord(msgRecord);
+
+    const snippet = msgRecord.audioUrl
+      ? '🎤 رسالة صوتية'
+      : msgRecord.fileName
+      ? `📎 ملف: ${msgRecord.fileName}`
+      : msgRecord.imageUrl
+      ? '📷 صورة'
+      : msgRecord.text || 'رسالة خاصة جديدة';
+
+    // Dispatch background push notification asynchronously
+    dispatchAuthorizedChatPush({
+      senderId: user.id,
+      senderName: user.displayName || user.username,
+      senderRole: user.role,
+      chatType: 'private',
+      receiverId,
+      messageId: id,
+      snippet,
+    }).catch((err) => console.error('[FCM] Private push dispatch error:', err));
+
     return res.json({ success: true, message: msgRecord });
   } catch (err: any) {
     return res.status(500).json({ error: err?.message || 'فشل إرسال الرسالة الخاصة' });
